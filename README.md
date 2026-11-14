@@ -32,26 +32,51 @@ $env:Path = "C:\msys64\ucrt64\bin;$env:Path"
 .\build-ucrt\scsr.exe
 ```
 
-If SCSE is already checked out locally, add
-`-DSCSR_SCSE_SOURCE_DIR=C:/path/to/SCSE` to the configure command. Lua 5.4 is
-required by the engine; SDL2 and Dear ImGui are fetched by CMake.
+The multi-ship controls require an SCSE checkout that includes the
+`SelectShips` command and `Player.selectedShips` state. Until that engine change
+is included in the pinned SCSE revision, configure against the modified local
+checkout with `-DSCSR_SCSE_SOURCE_DIR=C:/path/to/SCSE`. Lua 5.4 is required by
+the engine; SDL2 and Dear ImGui are fetched by CMake.
 
 ## View and controls
 
 - Right-drag to orbit the camera; Shift + right-drag to pan.
 - Use the mouse wheel or `+` / `-` to zoom.
 - `1`–`4` select orbital, XY, XZ, and YZ projections.
-- Click a ship, base, torpedo, or planet to inspect it.
+- Click a friendly ship to select it; Shift-click adds or removes it from the
+  control group. Drag a box to select friendly ships, or Shift-drag to add them.
+- Click an enemy ship, base, torpedo, or planet to inspect it.
+- Use **Ship by ID** in the targeting panel to select a specific engine ship
+  when several practice targets are close together; then use **Set Target / Aim**
+  (or `R`) to lock it.
 - `W` accelerates, `S` brakes, `X` coasts, and the arrow keys adjust heading.
 - `R` targets and aims at the selected contact; Space fires the phasor, `T`
   launches a torpedo, and `D` detonates an active torpedo.
 - The flight panel provides pause/speed controls, throttle stages, weapons, and
   planet/orbit navigation.
+- Thrust, heading, target, and phasor commands apply to the selected group.
+  Torpedo launch and planet/orbit navigation also apply to the selected group.
+- Selecting a weapon target does not cancel an active course or orbit-transfer
+  autopilot; without an active navigation order, ships aim toward the target.
+- Non-torpedo weapon fire is shown as a brief visual tracer; it does not create
+  an interceptable projectile. Torpedoes remain simulated entities.
 
 The world view retains the Python debug renderer's camera gestures, projection
-views, orbit levels, gravity boundaries, team colors, heading/velocity vectors,
-and ship trails. The GUI is a separate front end and does not change SCSE's
-console or snapshot renderer.
+views, orbit levels, gravity boundaries, team colors, 3D cone ship markers,
+ship travel direction, target-aim arrow, and ship trails. The GUI is a separate
+front end and does not change SCSE's console or snapshot renderer.
+
+The pinned SCSE scenario provides two stationary practice targets for each
+team. The targeting panel lists each active ship by engine ID, team, and name.
+
+## Source layout
+
+- `src/app/`: SDL/OpenGL application lifecycle and frame loop.
+- `src/game/`: SCSE simulation session, player commands, and ship trails.
+- `src/input/`: camera, selection, and keyboard/mouse input.
+- `src/renderer/`: world projection, contact picking, and scene drawing.
+- `src/ui/`: flight, targeting, navigation, and contact HUD panels.
+- `src/main.cpp`: application entry point.
 
 SCSR retains this repository's GPL-3.0 license. SCSE, SDL2, and Dear ImGui
 remain separate dependencies under their respective licenses.

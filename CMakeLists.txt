@@ -20,7 +20,7 @@ if(SCSR_SCSE_SOURCE_DIR)
 else()
     FetchContent_Declare(scse
         GIT_REPOSITORY https://github.com/Sierrastdio/SCSE.git
-        GIT_TAG 5216454865e2d709a320f493398689ff2376b2c7
+        GIT_TAG 113cf64199d8d5d190eaf650d13c6261be44c209
         GIT_SHALLOW FALSE
     )
     FetchContent_MakeAvailable(scse)
@@ -75,7 +75,11 @@ target_link_libraries(scsr_imgui PUBLIC ${SCSR_SDL2_TARGET} OpenGL::GL)
 
 add_executable(scsr
     src/main.cpp
-    src/world_renderer.cpp
+    src/app/game_app.cpp
+    src/game/game_session.cpp
+    src/input/input_controller.cpp
+    src/renderer/world_renderer.cpp
+    src/ui/game_hud.cpp
 )
 target_include_directories(scsr PRIVATE src)
 target_link_libraries(scsr PRIVATE scse_core ${SCSR_SDL2_TARGET} OpenGL::GL scsr_imgui)

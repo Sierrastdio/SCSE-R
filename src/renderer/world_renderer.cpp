@@ -27,6 +27,13 @@ spasim::Vec3 forwardVector(const spasim::Orientation &orientation)
   return {std::cos(pitch) * std::cos(yaw), std::cos(pitch) * std::sin(yaw), std::sin(pitch)};
 }
 
+spasim::Vec3 crossProduct(const spasim::Vec3 &lhs, const spasim::Vec3 &rhs)
+{
+  return {lhs.y * rhs.z - lhs.z * rhs.y, lhs.z * rhs.x - lhs.x * rhs.z, lhs.x * rhs.y - lhs.y * rhs.x};
+}
+
+double dotProduct(const spasim::Vec3 &lhs, const spasim::Vec3 &rhs) { return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z; }
+
 void drawDashedLine(ImDrawList &drawList, const ImVec2 &from, const ImVec2 &to, ImU32 color, float thickness)
 {
   constexpr int segmentCount = 12;
@@ -129,37 +136,51 @@ void drawAxes(ImDrawList &drawList, const WorldProjection &projection)
 void drawShip(ImDrawList &drawList, const WorldProjection &projection, const spasim::Ship &ship, ImU32 color, const ShipTrails &trails)
 {
   const ImVec2 position = projection.project(ship.position);
-  const spasim::Vec3 forward = forwardVector(ship.orientation);
-  const ImVec2 forwardPoint = projection.project(ship.position + forward * 100.0);
-  float dx = forwardPoint.x - position.x;
-  float dy = forwardPoint.y - position.y;
-  float directionLength = std::hypot(dx, dy);
-  if (directionLength < 0.001f)
-  {
-    dx = 0.0f;
-    dy = -1.0f;
-    directionLength = 1.0f;
-  }
-  dx /= directionLength;
-  dy /= directionLength;
-  const float px = -dy;
-  const float py = dx;
-  const ImVec2 nose(position.x + dx * 10.0f, position.y + dy * 10.0f);
-  const ImVec2 left(position.x - dx * 6.0f + px * 5.5f, position.y - dy * 6.0f + py * 5.5f);
-  const ImVec2 right(position.x - dx * 6.0f - px * 5.5f, position.y - dy * 6.0f - py * 5.5f);
-  drawList.AddTriangleFilled(nose, left, right, color);
-  drawList.AddTriangle(nose, left, right, IM_COL32(238, 245, 255, 255), 1.0f);
-
-  const double speed = std::max(ship.speed, 1.0);
-  const double headingDistance = std::clamp(speed * 10.0, 80.0, 600.0);
-  drawDashedLine(drawList, position, projection.project(ship.position + forward * headingDistance), color, 1.5f);
-
   const double velocityLength = ship.velocity.length();
+  const spasim::Vec3 travelDirection =
+    velocityLength > 0.01 ? ship.velocity * (1.0 / velocityLength) : forwardVector(ship.orientation);
+  const double yaw = ship.orientation.yawDegrees * std::numbers::pi / 180.0;
+  spasim::Vec3 lateral{-std::sin(yaw), std::cos(yaw), 0.0};
+  lateral -= travelDirection * dotProduct(lateral, travelDirection);
+  double lateralLength = lateral.length();
+  if (lateralLength < 1e-6)
+  {
+    lateral = crossProduct(travelDirection, {0.0, 0.0, 1.0});
+    lateralLength = lateral.length();
+  }
+  if (lateralLength < 1e-6)
+  {
+    lateral = crossProduct(travelDirection, {0.0, 1.0, 0.0});
+    lateralLength = lateral.length();
+  }
+  lateral = lateral * (1.0 / lateralLength);
+
+  spasim::Vec3 vertical = crossProduct(travelDirection, lateral);
+  vertical = vertical * (1.0 / vertical.length());
+
+  const double sizeScale = 1.0 / projection.scale;
+  constexpr std::size_t coneSegments = 12;
+  const spasim::Vec3 nose = ship.position + travelDirection * (10.0 * sizeScale);
+  const spasim::Vec3 baseCenter = ship.position - travelDirection * (6.0 * sizeScale);
+  std::array<ImVec2, coneSegments> baseRing;
+  const ImVec2 projectedNose = projection.project(nose);
+  for (std::size_t index = 0; index < coneSegments; ++index)
+  {
+    const double angle = 2.0 * std::numbers::pi * index / coneSegments;
+    const spasim::Vec3 ringPoint =
+      baseCenter + lateral * (5.5 * sizeScale * std::cos(angle)) + vertical * (5.5 * sizeScale * std::sin(angle));
+    baseRing[index] = projection.project(ringPoint);
+  }
+  for (std::size_t index = 0; index < coneSegments; ++index)
+    drawList.AddTriangleFilled(projectedNose, baseRing[index], baseRing[(index + 1) % coneSegments], color);
+  drawList.AddPolyline(baseRing.data(), static_cast<int>(baseRing.size()), IM_COL32(238, 245, 255, 220), ImDrawFlags_Closed, 1.0f);
+  for (std::size_t index = 0; index < coneSegments; index += 3)
+    drawList.AddLine(projectedNose, baseRing[index], IM_COL32(238, 245, 255, 175), 1.0f);
+
   if (velocityLength > 0.01)
   {
-    const double arrowLength = std::clamp(velocityLength * 8.0, 20.0, 100.0);
-    drawArrow(drawList, position, projection.project(ship.position + ship.velocity * (arrowLength / velocityLength)),
-      IM_COL32(249, 213, 106, 255), 1.7f);
+    const double travelDistance = std::clamp(velocityLength * 10.0, 80.0, 600.0);
+    drawDashedLine(drawList, position, projection.project(ship.position + travelDirection * travelDistance), color, 1.5f);
   }
 
   const auto trail = trails.find(ship.id);
@@ -287,8 +308,9 @@ std::optional<spasim::Target> pickObject(const spasim::World &world, const World
   return picked;
 }
 
-void drawWorld(ImDrawList &drawList, const spasim::World &world, const Camera &camera, const std::optional<spasim::Target> &selection,
-  const ShipTrails &trails, float width, float height)
+void drawWorld(ImDrawList &drawList, const spasim::World &world, spasim::PlayerId playerId, const Camera &camera,
+  const std::optional<spasim::Target> &selection, const ShipTrails &trails, const WeaponShotVisuals &weaponShots, float width,
+  float height)
 {
   drawList.AddRectFilled({0.0f, 0.0f}, {width, height}, IM_COL32(7, 11, 19, 255));
   for (int index = 0; index < 140; ++index)
@@ -343,6 +365,7 @@ void drawWorld(ImDrawList &drawList, const spasim::World &world, const Camera &c
     drawList.AddText(ImVec2(position.x + 7.0f, position.y - 12.0f), color, (team.name + " spawn").c_str());
   }
 
+  const auto *player = world.findPlayer(playerId);
   for (const auto &ship : world.ships)
   {
     if (!ship || !ship->exists)
@@ -350,6 +373,10 @@ void drawWorld(ImDrawList &drawList, const spasim::World &world, const Camera &c
     const ImU32 color = teamColor(ship->team);
     drawShip(drawList, projection, *ship, color, trails);
     const ImVec2 position = projection.project(ship->position);
+    if (player && ship->owner == playerId &&
+        (player->selectedShips.empty() ? ship->id == player->shipId
+                                       : std::ranges::find(player->selectedShips, ship->id) != player->selectedShips.end()))
+      drawList.AddCircle(position, 18.0f, IM_COL32(92, 224, 193, 230), 0, 2.0f);
     if (selection && selection->kind == spasim::Target::Kind::Entity && selection->id == ship->id)
       drawList.AddCircle(position, 16.0f, IM_COL32(255, 255, 255, 230), 0, 2.0f);
   }
@@ -380,6 +407,50 @@ void drawWorld(ImDrawList &drawList, const spasim::World &world, const Camera &c
     drawList.AddCircle(position, 6.0f, color, 0, 1.5f);
     if (selection && selection->kind == spasim::Target::Kind::Entity && selection->id == torpedo->id)
       drawList.AddCircle(position, 14.0f, IM_COL32(255, 255, 255, 230), 0, 2.0f);
+  }
+
+  for (const auto &shot : weaponShots)
+  {
+    const double progress = std::clamp(shot.elapsedSeconds / shot.durationSeconds, 0.0, 1.0);
+    const double tailProgress = std::max(0.0, progress - 0.12);
+    const ImVec2 tail = projection.project(shot.origin + (shot.destination - shot.origin) * tailProgress);
+    const ImVec2 head = projection.project(shot.origin + (shot.destination - shot.origin) * progress);
+    const ImU32 color = shot.explosive ? IM_COL32(255, 156, 79, 230) : teamColor(shot.team);
+    const ImU32 glow = shot.explosive ? IM_COL32(255, 111, 49, 90) : IM_COL32(72, 196, 255, 90);
+    drawList.AddLine(tail, head, glow, 7.0f);
+    drawList.AddLine(tail, head, color, 2.5f);
+    drawList.AddCircleFilled(head, 3.5f, color);
+  }
+
+  if (player)
+  {
+    const auto drawShipTarget = [&](spasim::EntityId shipId) {
+      const auto *ship = world.findShip(shipId);
+      if (!ship || !ship->exists || !ship->selectedTarget)
+        return;
+      const auto *targetShip = world.findShip(*ship->selectedTarget);
+      const auto *targetBase = world.findBase(*ship->selectedTarget);
+      const auto *targetTorpedo = world.findTorpedo(*ship->selectedTarget);
+      const spasim::Vec3 *targetPosition = targetShip && targetShip->exists         ? &targetShip->position
+                                           : targetBase && targetBase->exists       ? &targetBase->position
+                                           : targetTorpedo && targetTorpedo->exists ? &targetTorpedo->position
+                                                                                    : nullptr;
+      if (!targetPosition)
+        return;
+      const ImVec2 origin = projection.project(ship->position);
+      const ImVec2 aimPoint = projection.project(*targetPosition);
+      drawArrow(drawList, origin, aimPoint, IM_COL32(255, 214, 91, 255), 2.2f);
+      drawList.AddCircle(aimPoint, 10.0f, IM_COL32(255, 214, 91, 235), 0, 1.8f);
+      drawList.AddCircle(aimPoint, 3.0f, IM_COL32(255, 214, 91, 255));
+      drawList.AddText(ImVec2(aimPoint.x + 12.0f, aimPoint.y - 8.0f), IM_COL32(255, 214, 91, 255),
+        ("AIM #" + std::to_string(*ship->selectedTarget)).c_str());
+    };
+
+    if (player->selectedShips.empty())
+      drawShipTarget(player->shipId);
+    else
+      for (const auto shipId : player->selectedShips)
+        drawShipTarget(shipId);
   }
 
   const char *plane = camera.plane == ViewPlane::Orbit ? "ORBITAL"
