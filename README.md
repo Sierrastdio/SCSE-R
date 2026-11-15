@@ -11,12 +11,11 @@ checkout instead, set `SCSR_SCSE_SOURCE_DIR` to its root directory.
 
 ## Build on Windows with MSYS2 UCRT64
 
-Install the compiler, CMake, Ninja, and Lua development files from an MSYS2
-UCRT64 terminal:
+Install the compiler, CMake, and Ninja from an MSYS2 UCRT64 terminal:
 
 ```bash
 pacman -S --needed mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake \
-  mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-lua
+  mingw-w64-ucrt-x86_64-ninja
 ```
 
 Configure and build from PowerShell at the SCSR repository root:
@@ -24,19 +23,18 @@ Configure and build from PowerShell at the SCSR repository root:
 ```powershell
 cmake -S . -B build-ucrt -G Ninja `
   -DCMAKE_MAKE_PROGRAM=C:/msys64/ucrt64/bin/ninja.exe `
-  -DCMAKE_CXX_COMPILER=C:/msys64/ucrt64/bin/g++.exe `
-  -DLUA_INCLUDE_DIR=C:/msys64/ucrt64/include `
-  -DLUA_LIBRARY=C:/msys64/ucrt64/lib/liblua.dll.a
+  -DCMAKE_CXX_COMPILER=C:/msys64/ucrt64/bin/g++.exe
 cmake --build build-ucrt --parallel
 $env:Path = "C:\msys64\ucrt64\bin;$env:Path"
 .\build-ucrt\scsr.exe
 ```
 
-The multi-ship controls require an SCSE checkout that includes the
-`SelectShips` command and `Player.selectedShips` state. Until that engine change
-is included in the pinned SCSE revision, configure against the modified local
-checkout with `-DSCSR_SCSE_SOURCE_DIR=C:/path/to/SCSE`. Lua 5.4 is required by
-the engine; SDL2 and Dear ImGui are fetched by CMake.
+SCSR expects an SCSE checkout with the C++ `Simulation(World)` API, the
+`SelectShips` command, and `Player.selectedShips` state. Until that engine
+revision is included in the pinned SCSE revision, configure against the
+matching local checkout with `-DSCSR_SCSE_SOURCE_DIR=C:/path/to/SCSE`. SCSE
+provides its scenario and game rules in C++; Lua is not required. SDL2 and Dear
+ImGui are fetched by CMake.
 
 ## View and controls
 
@@ -52,6 +50,13 @@ the engine; SDL2 and Dear ImGui are fetched by CMake.
 - `W` accelerates, `S` brakes, `X` coasts, and the arrow keys adjust heading.
 - `R` targets and aims at the selected contact; Space fires the phasor, `T`
   launches a torpedo, and `D` detonates an active torpedo.
+- Per-weapon horizontal and vertical firing limits are configured in SCSE's
+  `WeaponProfile::aim` settings (`maximumHorizontalFiringAngleDegrees` and
+  `maximumVerticalFiringAngleDegrees`) in `src/rules/scenario.cpp`. Both are
+  relative to the ship's facing.
+- The selected weapon's range and horizontal/vertical firing limits are shown
+  as a translucent fan around the selected ships; explosive weapons use an
+  orange fan and other weapons use blue.
 - The flight panel provides pause/speed controls, throttle stages, weapons, and
   planet/orbit navigation.
 - Thrust, heading, target, and phasor commands apply to the selected group.

@@ -3,7 +3,6 @@
 #include "engine/engine.hpp"
 #include "renderer/world_renderer.hpp"
 
-#include <filesystem>
 #include <optional>
 #include <string>
 #include <vector>
@@ -14,7 +13,7 @@ namespace scsr
 class GameSession
 {
 public:
-  explicit GameSession(const std::filesystem::path &rulesPath);
+  GameSession();
 
   [[nodiscard]] spasim::World &world() noexcept;
   [[nodiscard]] const spasim::World &world() const noexcept;
@@ -42,6 +41,7 @@ public:
   void updateTrails();
 
   bool execute(const spasim::WorldCommand &command);
+  void firePhasor();
   void aimAtSelection();
   void launchTorpedo();
   void adjustHeading(double yawDegrees, double pitchDegrees);

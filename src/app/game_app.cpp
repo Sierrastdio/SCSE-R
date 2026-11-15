@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdio>
-#include <filesystem>
 #include <stdexcept>
 #include <string>
 
@@ -62,11 +61,7 @@ void GameApp::initialize()
     throw std::runtime_error("Dear ImGui OpenGL backend initialization failed.");
   imguiGlInitialized_ = true;
 
-  const std::unique_ptr<char, decltype(&SDL_free)> executablePath(SDL_GetBasePath(), &SDL_free);
-  if (!executablePath)
-    throw std::runtime_error(std::string("Could not locate the executable directory: ") + SDL_GetError());
-  const std::filesystem::path rulesPath = std::filesystem::path(executablePath.get()) / "scripts" / "game_rules.lua";
-  session_ = std::make_unique<GameSession>(rulesPath);
+  session_ = std::make_unique<GameSession>();
 }
 
 int GameApp::run()

@@ -93,6 +93,68 @@ void drawRing(ImDrawList &drawList, const WorldProjection &projection, const spa
   drawList.PathStroke(color, ImDrawFlags_Closed, 1.0f);
 }
 
+void drawWeaponFan(ImDrawList &drawList, const WorldProjection &projection, const spasim::Ship &ship,
+  const spasim::WeaponProfile &weapon)
+{
+  if (weapon.range <= 0.0)
+    return;
+
+  const double horizontalAngle = std::clamp(weapon.aim.maximumHorizontalFiringAngleDegrees, 0.0, 180.0);
+  const double verticalAngle = std::clamp(weapon.aim.maximumVerticalFiringAngleDegrees, 0.0, 180.0);
+  const double minimumPitch = std::max(-90.0, ship.orientation.pitchDegrees - verticalAngle);
+  const double maximumPitch = std::min(90.0, ship.orientation.pitchDegrees + verticalAngle);
+  const int horizontalSegments = std::max(2, static_cast<int>(std::ceil(horizontalAngle / 5.0)) * 2);
+  const int verticalSegments = std::max(1, static_cast<int>(std::ceil((maximumPitch - minimumPitch) / 15.0)));
+  const ImVec2 origin = projection.project(ship.position);
+  const ImU32 fillColor = weapon.explosive ? IM_COL32(255, 142, 73, 7) : IM_COL32(79, 190, 255, 7);
+  const ImU32 edgeColor = weapon.explosive ? IM_COL32(255, 157, 89, 125) : IM_COL32(94, 204, 255, 125);
+
+  const auto projectRangePoint = [&](double yawDegrees, double pitchDegrees) {
+    const double yaw = yawDegrees * std::numbers::pi / 180.0;
+    const double pitch = pitchDegrees * std::numbers::pi / 180.0;
+    const spasim::Vec3 direction{std::cos(pitch) * std::cos(yaw), std::cos(pitch) * std::sin(yaw), std::sin(pitch)};
+    return projection.project(ship.position + direction * weapon.range);
+  };
+  const auto yawAt = [&](int index) {
+    return ship.orientation.yawDegrees - horizontalAngle + horizontalAngle * 2.0 * static_cast<double>(index) / horizontalSegments;
+  };
+  const auto pitchAt = [&](int index) {
+    return minimumPitch + (maximumPitch - minimumPitch) * static_cast<double>(index) / verticalSegments;
+  };
+
+  for (int pitchIndex = 0; pitchIndex <= verticalSegments; ++pitchIndex)
+  {
+    const double pitch = pitchAt(pitchIndex);
+    for (int yawIndex = 0; yawIndex < horizontalSegments; ++yawIndex)
+    {
+      drawList.AddTriangleFilled(origin, projectRangePoint(yawAt(yawIndex), pitch), projectRangePoint(yawAt(yawIndex + 1), pitch),
+        fillColor);
+    }
+  }
+
+  const auto drawHorizontalArc = [&](double pitch) {
+    std::vector<ImVec2> points;
+    points.reserve(static_cast<std::size_t>(horizontalSegments + 1));
+    for (int index = 0; index <= horizontalSegments; ++index)
+      points.push_back(projectRangePoint(yawAt(index), pitch));
+    drawList.AddPolyline(points.data(), static_cast<int>(points.size()), edgeColor, 0, 1.2f);
+  };
+  const auto drawVerticalEdge = [&](double yaw) {
+    std::vector<ImVec2> points;
+    points.reserve(static_cast<std::size_t>(verticalSegments + 1));
+    for (int index = 0; index <= verticalSegments; ++index)
+      points.push_back(projectRangePoint(yaw, pitchAt(index)));
+    drawList.AddPolyline(points.data(), static_cast<int>(points.size()), edgeColor, 0, 1.2f);
+  };
+
+  drawHorizontalArc(minimumPitch);
+  drawHorizontalArc(maximumPitch);
+  drawVerticalEdge(yawAt(0));
+  drawVerticalEdge(yawAt(horizontalSegments));
+  drawList.AddLine(origin, projectRangePoint(yawAt(0), ship.orientation.pitchDegrees), edgeColor, 1.0f);
+  drawList.AddLine(origin, projectRangePoint(yawAt(horizontalSegments), ship.orientation.pitchDegrees), edgeColor, 1.0f);
+}
+
 void drawAxes(ImDrawList &drawList, const WorldProjection &projection)
 {
   constexpr double axisLength = 500.0;
@@ -366,6 +428,26 @@ void drawWorld(ImDrawList &drawList, const spasim::World &world, spasim::PlayerI
   }
 
   const auto *player = world.findPlayer(playerId);
+  if (player && player->weapon < world.weapons.size())
+  {
+    const auto &weapon = world.weapons[player->weapon];
+    if (player->selectedShips.empty())
+    {
+      const auto *ship = world.findShip(player->shipId);
+      if (ship && ship->exists)
+        drawWeaponFan(drawList, projection, *ship, weapon);
+    }
+    else
+    {
+      for (const auto shipId : player->selectedShips)
+      {
+        const auto *ship = world.findShip(shipId);
+        if (ship && ship->exists && ship->owner == playerId)
+          drawWeaponFan(drawList, projection, *ship, weapon);
+      }
+    }
+  }
+
   for (const auto &ship : world.ships)
   {
     if (!ship || !ship->exists)

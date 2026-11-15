@@ -11,7 +11,7 @@
 namespace scsr
 {
 
-GameSession::GameSession(const std::filesystem::path &rulesPath) : simulation_(spasim::makeInitialWorld(), rulesPath)
+GameSession::GameSession() : simulation_(spasim::makeInitialWorld())
 {
   const auto playerId = spasim::joinTeam(simulation_.world(), 0, "Pilot");
   if (!playerId)
@@ -208,6 +208,8 @@ bool GameSession::execute(const spasim::WorldCommand &command)
   setStatus(result.message, static_cast<bool>(result));
   return static_cast<bool>(result);
 }
+
+void GameSession::firePhasor() { execute(spasim::FirePhasor{1.0}); }
 
 void GameSession::aimAtSelection()
 {

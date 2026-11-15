@@ -157,7 +157,7 @@ void InputController::handleKey(SDL_Keycode key, Camera &camera, GameSession &se
     case SDLK_s: session.execute(spasim::SetAcceleration{spasim::AccelerationMode::Decelerate}); break;
     case SDLK_x: session.execute(spasim::SetAcceleration{spasim::AccelerationMode::Cruise}); break;
     case SDLK_r: session.aimAtSelection(); break;
-    case SDLK_SPACE: session.execute(spasim::FirePhasor{1.0}); break;
+    case SDLK_SPACE: session.firePhasor(); break;
     case SDLK_t: session.launchTorpedo(); break;
     case SDLK_d: session.execute(spasim::DetonateTorpedo{}); break;
     default: break;

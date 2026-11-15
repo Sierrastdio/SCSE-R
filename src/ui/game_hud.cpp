@@ -182,8 +182,32 @@ void GameHud::drawFlightPanel(GameSession &session, int width, int height)
     }
     ImGui::EndCombo();
   }
+  const auto *player = session.world().findPlayer(session.playerId());
+  if (player && player->weapon < session.world().weapons.size())
+  {
+    const auto &weapon = session.world().weapons[player->weapon];
+    ImGui::Text("WEAPON RANGE  %.0f", weapon.range);
+    ImGui::Text("FIRING LIMITS  H +/- %.0f / V +/- %.0f deg", weapon.aim.maximumHorizontalFiringAngleDegrees,
+      weapon.aim.maximumVerticalFiringAngleDegrees);
+    if (!selectedShipIds.empty())
+    {
+      const auto *selectedShip = session.world().findShip(selectedShipIds.front());
+      if (selectedShip && selectedShip->selectedTarget)
+      {
+        const auto *targetShip = session.world().findShip(*selectedShip->selectedTarget);
+        const auto *targetBase = session.world().findBase(*selectedShip->selectedTarget);
+        const auto *targetTorpedo = session.world().findTorpedo(*selectedShip->selectedTarget);
+        const spasim::Vec3 *targetPosition = targetShip && targetShip->exists         ? &targetShip->position
+                                             : targetBase && targetBase->exists       ? &targetBase->position
+                                             : targetTorpedo && targetTorpedo->exists ? &targetTorpedo->position
+                                                                                      : nullptr;
+        if (targetPosition)
+          ImGui::Text("3D TARGET DISTANCE  %.0f", selectedShip->position.distanceTo(*targetPosition));
+      }
+    }
+  }
   if (ImGui::Button("FIRE PHASOR  [SPACE]", ImVec2(-1.0f, 30.0f)))
-    session.execute(spasim::FirePhasor{1.0});
+    session.firePhasor();
   if (ImGui::Button("LAUNCH TORPEDO  [T]  |  SELECTED GROUP", ImVec2(-1.0f, 30.0f)))
     session.launchTorpedo();
   if (ImGui::Button("DETONATE TORPEDO  [D]", ImVec2(-1.0f, 28.0f)))

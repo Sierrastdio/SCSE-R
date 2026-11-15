@@ -90,9 +90,3 @@ if(MSVC)
 else()
     target_compile_options(scsr PRIVATE -Wall -Wextra -Wpedantic)
 endif()
-
-add_custom_command(TARGET scsr POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${SCSE_SOURCE_DIR}/scripts"
-            "$<TARGET_FILE_DIR:scsr>/scripts"
-)
