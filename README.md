@@ -36,6 +36,49 @@ matching local checkout with `-DSCSR_SCSE_SOURCE_DIR=C:/path/to/SCSE`. SCSE
 provides its scenario and game rules in C++; Lua is not required. SDL2 and Dear
 ImGui are fetched by CMake.
 
+## Build on Arch Linux
+
+Install the C++ toolchain, CMake, Ninja, Git (for CMake `FetchContent`), and
+OpenGL and SDL2's common X11/Wayland development dependencies:
+
+```bash
+sudo pacman -S --needed base-devel cmake ninja git pkgconf libglvnd mesa \
+  libx11 libxext libxrandr libxcursor libxinerama libxi libxfixes libxss libxtst \
+  wayland wayland-protocols libxkbcommon
+```
+
+From the SCSR repository root, configure an out-of-source Ninja build:
+
+```bash
+cmake -S . -B build-arch -G Ninja -DCMAKE_BUILD_TYPE=Release
+```
+
+Here, `-S .` selects the source directory, `-B build-arch` keeps generated
+files out of the source tree, and `-G Ninja` tells CMake to generate
+`build.ninja`. SDL2, Dear ImGui, and the pinned SCSE revision are downloaded
+during the first configure, so that step requires network access.
+
+Build and run:
+
+```bash
+cmake --build build-arch --parallel
+./build-arch/scsr
+```
+
+`cmake --build` selects Ninja from the generated build tree automatically.
+Alternatively, run `ninja -C build-arch` directly. To change CMake options,
+repeat the configure command with the same build directory. Do not reuse a
+build directory when switching generators; configure a new one instead.
+
+To build against a compatible local SCSE checkout rather than the pinned
+revision, pass its path at configure time:
+
+```bash
+cmake -S . -B build-arch -G Ninja -DCMAKE_BUILD_TYPE=Release \
+  -DSCSR_SCSE_SOURCE_DIR="$HOME/문서/clone/NEONspasim"
+cmake --build build-arch --parallel
+```
+
 ## View and controls
 
 - Right-drag to orbit the camera; Shift + right-drag to pan.
