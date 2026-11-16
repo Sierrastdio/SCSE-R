@@ -89,8 +89,6 @@ bool GameSession::toggleShipSelection(spasim::EntityId shipId)
 
 const ShipTrails &GameSession::shipTrails() const noexcept { return trails_; }
 
-const WeaponShotVisuals &GameSession::weaponShots() const noexcept { return weaponShots_; }
-
 const std::string &GameSession::status() const noexcept { return status_; }
 
 bool GameSession::statusSucceeded() const noexcept { return statusSucceeded_; }
@@ -111,10 +109,6 @@ void GameSession::setSimulationSpeed(float speed) noexcept { simulationSpeed_ = 
 
 void GameSession::advance(double frameSeconds)
 {
-  for (auto &shot : weaponShots_)
-    shot.elapsedSeconds += std::max(frameSeconds, 0.0);
-  std::erase_if(weaponShots_, [](const WeaponShotVisual &shot) { return shot.elapsedSeconds >= shot.durationSeconds; });
-
   if (!simulationRunning_)
     return;
 
@@ -150,61 +144,7 @@ void GameSession::updateTrails()
 
 bool GameSession::execute(const spasim::WorldCommand &command)
 {
-  struct ShotCandidate
-  {
-    spasim::EntityId shipId{};
-    spasim::Vec3 origin{};
-    spasim::Vec3 destination{};
-    spasim::TeamId team{};
-    double energyBefore{};
-  };
-
-  std::vector<ShotCandidate> shotCandidates;
-  double projectileSpeed{};
-  bool explosive{};
-  if (std::get_if<spasim::FirePhasor>(&command))
-  {
-    const auto *player = world().findPlayer(playerId_);
-    if (player && player->weapon < world().weapons.size())
-    {
-      const auto &weapon = world().weapons[player->weapon];
-      projectileSpeed = weapon.projectileSpeed;
-      explosive = weapon.explosive;
-
-      for (const auto shipId : selectedShipIds())
-      {
-        const auto *ship = world().findShip(shipId);
-        if (!ship || !ship->selectedTarget)
-          continue;
-
-        const auto *targetShip = world().findShip(*ship->selectedTarget);
-        const auto *targetBase = world().findBase(*ship->selectedTarget);
-        const auto *targetTorpedo = world().findTorpedo(*ship->selectedTarget);
-        const spasim::Vec3 *targetPosition = targetShip && targetShip->exists         ? &targetShip->position
-                                             : targetBase && targetBase->exists       ? &targetBase->position
-                                             : targetTorpedo && targetTorpedo->exists ? &targetTorpedo->position
-                                                                                      : nullptr;
-        if (targetPosition)
-          shotCandidates.push_back({shipId, ship->position, *targetPosition, ship->team, ship->resources.energy});
-      }
-    }
-  }
-
   const auto result = simulation_.execute(playerId_, command);
-  if (result)
-  {
-    for (const auto &candidate : shotCandidates)
-    {
-      const auto *ship = world().findShip(candidate.shipId);
-      if (!ship || candidate.energyBefore <= ship->resources.energy)
-        continue;
-
-      const double travelSeconds =
-        projectileSpeed > 1e-9 ? candidate.origin.distanceTo(candidate.destination) / projectileSpeed : 0.25;
-      const double durationSeconds = std::clamp(travelSeconds * 0.08, 0.12, 0.8);
-      weaponShots_.push_back({candidate.origin, candidate.destination, candidate.team, 0.0, durationSeconds, explosive});
-    }
-  }
   setStatus(result.message, static_cast<bool>(result));
   return static_cast<bool>(result);
 }

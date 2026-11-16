@@ -27,7 +27,6 @@ public:
   bool selectShips(std::vector<spasim::EntityId> shipIds);
   bool toggleShipSelection(spasim::EntityId shipId);
   [[nodiscard]] const ShipTrails &shipTrails() const noexcept;
-  [[nodiscard]] const WeaponShotVisuals &weaponShots() const noexcept;
 
   [[nodiscard]] const std::string &status() const noexcept;
   [[nodiscard]] bool statusSucceeded() const noexcept;
@@ -52,7 +51,6 @@ private:
   spasim::PlayerId playerId_{};
   std::optional<spasim::Target> selection_;
   ShipTrails trails_;
-  WeaponShotVisuals weaponShots_;
   std::string status_;
   bool statusSucceeded_{true};
   bool simulationRunning_{true};

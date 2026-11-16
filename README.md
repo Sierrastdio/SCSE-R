@@ -106,8 +106,9 @@ cmake --build build-arch --parallel
   Torpedo launch and planet/orbit navigation also apply to the selected group.
 - Selecting a weapon target does not cancel an active course or orbit-transfer
   autopilot; without an active navigation order, ships aim toward the target.
-- Non-torpedo weapon fire is shown as a brief visual tracer; it does not create
-  an interceptable projectile. Torpedoes remain simulated entities.
+- Non-torpedo weapons create simulated projectiles; shields and hull are damaged
+  only when a projectile reaches its target. Torpedoes remain separate simulated
+  entities.
 
 The world view retains the Python debug renderer's camera gestures, projection
 views, orbit levels, gravity boundaries, team colors, 3D cone ship markers,

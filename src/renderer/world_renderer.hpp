@@ -46,25 +46,12 @@ struct WorldProjection
 
 using ShipTrails = std::unordered_map<spasim::EntityId, std::deque<spasim::Vec3>>;
 
-struct WeaponShotVisual
-{
-  spasim::Vec3 origin{};
-  spasim::Vec3 destination{};
-  spasim::TeamId team{};
-  double elapsedSeconds{};
-  double durationSeconds{};
-  bool explosive{};
-};
-
-using WeaponShotVisuals = std::vector<WeaponShotVisual>;
-
 [[nodiscard]] WorldProjection makeProjection(const spasim::World &world, const Camera &camera, float width, float height);
 
 [[nodiscard]] std::optional<spasim::Target> pickObject(const spasim::World &world, const WorldProjection &projection,
   const ImVec2 &point, float radius = 16.0f);
 
 void drawWorld(ImDrawList &drawList, const spasim::World &world, spasim::PlayerId playerId, const Camera &camera,
-  const std::optional<spasim::Target> &selection, const ShipTrails &trails, const WeaponShotVisuals &weaponShots, float width,
-  float height);
+  const std::optional<spasim::Target> &selection, const ShipTrails &trails, float width, float height);
 
 } // namespace scsr

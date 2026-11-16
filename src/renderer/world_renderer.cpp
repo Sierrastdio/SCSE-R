@@ -303,7 +303,8 @@ ImVec2 WorldProjection::project(const spasim::Vec3 &point) const
 WorldProjection makeProjection(const spasim::World &world, const Camera &camera, float width, float height)
 {
   std::vector<spasim::Vec3> positions;
-  positions.reserve(world.planets.size() + world.ships.size() + world.bases.size() + world.torpedoes.size());
+  positions.reserve(world.planets.size() + world.ships.size() + world.bases.size() + world.torpedoes.size()
+    + world.weaponProjectiles.size());
   for (const auto &planet : world.planets)
     positions.push_back(planet.position);
   for (const auto &ship : world.ships)
@@ -315,6 +316,10 @@ WorldProjection makeProjection(const spasim::World &world, const Camera &camera,
   for (const auto &torpedo : world.torpedoes)
     if (torpedo && torpedo->exists)
       positions.push_back(torpedo->position);
+  for (const auto &projectile : world.weaponProjectiles)
+  {
+    positions.push_back(projectile.position);
+  }
   if (positions.empty())
     positions.push_back({});
 
@@ -371,8 +376,7 @@ std::optional<spasim::Target> pickObject(const spasim::World &world, const World
 }
 
 void drawWorld(ImDrawList &drawList, const spasim::World &world, spasim::PlayerId playerId, const Camera &camera,
-  const std::optional<spasim::Target> &selection, const ShipTrails &trails, const WeaponShotVisuals &weaponShots, float width,
-  float height)
+  const std::optional<spasim::Target> &selection, const ShipTrails &trails, float width, float height)
 {
   drawList.AddRectFilled({0.0f, 0.0f}, {width, height}, IM_COL32(7, 11, 19, 255));
   for (int index = 0; index < 140; ++index)
@@ -491,14 +495,12 @@ void drawWorld(ImDrawList &drawList, const spasim::World &world, spasim::PlayerI
       drawList.AddCircle(position, 14.0f, IM_COL32(255, 255, 255, 230), 0, 2.0f);
   }
 
-  for (const auto &shot : weaponShots)
+  for (const auto &projectile : world.weaponProjectiles)
   {
-    const double progress = std::clamp(shot.elapsedSeconds / shot.durationSeconds, 0.0, 1.0);
-    const double tailProgress = std::max(0.0, progress - 0.12);
-    const ImVec2 tail = projection.project(shot.origin + (shot.destination - shot.origin) * tailProgress);
-    const ImVec2 head = projection.project(shot.origin + (shot.destination - shot.origin) * progress);
-    const ImU32 color = shot.explosive ? IM_COL32(255, 156, 79, 230) : teamColor(shot.team);
-    const ImU32 glow = shot.explosive ? IM_COL32(255, 111, 49, 90) : IM_COL32(72, 196, 255, 90);
+    const ImVec2 head = projection.project(projectile.position);
+    const ImVec2 tail = projection.project(projectile.position - projectile.velocity * 0.02);
+    const ImU32 color = projectile.explosive ? IM_COL32(255, 156, 79, 230) : teamColor(projectile.team);
+    const ImU32 glow = projectile.explosive ? IM_COL32(255, 111, 49, 90) : IM_COL32(72, 196, 255, 90);
     drawList.AddLine(tail, head, glow, 7.0f);
     drawList.AddLine(tail, head, color, 2.5f);
     drawList.AddCircleFilled(head, 3.5f, color);

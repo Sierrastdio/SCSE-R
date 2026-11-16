@@ -141,7 +141,7 @@ void GameApp::render()
   int height{};
   SDL_GetWindowSize(window_, &width, &height);
   drawWorld(*ImGui::GetBackgroundDrawList(), session_->world(), session_->playerId(), camera_, session_->selection(),
-    session_->shipTrails(), session_->weaponShots(), static_cast<float>(width), static_cast<float>(height));
+    session_->shipTrails(), static_cast<float>(width), static_cast<float>(height));
   GameHud::draw(*session_, camera_, width, height);
   input_.drawOverlay();
   ImGui::Render();
