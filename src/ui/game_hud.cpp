@@ -119,7 +119,17 @@ void GameHud::drawFlightPanel(GameSession &session, int width, int height)
   }
   else if (selection->kind == spasim::Target::Kind::Entity)
   {
-    ImGui::TextDisabled("ENTITY  #%u", selection->id);
+    const auto *targetShip = world.findShip(selection->id);
+    if (targetShip && targetShip->exists)
+    {
+      ImGui::TextDisabled("TARGET #%u T%u", targetShip->id, targetShip->team + 1);
+      ImGui::Text("TGT HULL %.0f SHD %.0f", targetShip->combat.hull - targetShip->combat.hullDamage,
+        targetShip->combat.shields);
+    }
+    else
+    {
+      ImGui::TextDisabled("ENTITY  #%u", selection->id);
+    }
   }
   ImGui::EndChild();
 
