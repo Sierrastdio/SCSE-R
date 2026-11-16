@@ -3,6 +3,8 @@
 #include "game/game_session.hpp"
 #include "renderer/world_renderer.hpp"
 
+#include <string>
+
 namespace scsr
 {
 
@@ -12,10 +14,9 @@ public:
   static void draw(GameSession &session, Camera &camera, int width, int height);
 
 private:
-  static void drawCameraPanel(const GameSession &session, Camera &camera);
+  static void drawCameraPanel(Camera &camera);
   static void drawFlightPanel(GameSession &session, int width, int height);
-  static void drawSelectionPanel(const GameSession &session, int height);
-  [[nodiscard]] static const char *currentWeaponName(const GameSession &session);
+  [[nodiscard]] static std::string currentWeaponName(const GameSession &session);
 
   static int orbitLevel_;
 };

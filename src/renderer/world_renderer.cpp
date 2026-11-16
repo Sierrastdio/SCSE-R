@@ -432,22 +432,21 @@ void drawWorld(ImDrawList &drawList, const spasim::World &world, spasim::PlayerI
   }
 
   const auto *player = world.findPlayer(playerId);
-  if (player && player->weapon < world.weapons.size())
+  if (player)
   {
-    const auto &weapon = world.weapons[player->weapon];
     if (player->selectedShips.empty())
     {
       const auto *ship = world.findShip(player->shipId);
-      if (ship && ship->exists)
-        drawWeaponFan(drawList, projection, *ship, weapon);
+      if (ship && ship->exists && ship->weapon < world.weapons.size())
+        drawWeaponFan(drawList, projection, *ship, world.weapons[ship->weapon]);
     }
     else
     {
       for (const auto shipId : player->selectedShips)
       {
         const auto *ship = world.findShip(shipId);
-        if (ship && ship->exists && ship->owner == playerId)
-          drawWeaponFan(drawList, projection, *ship, weapon);
+        if (ship && ship->exists && ship->owner == playerId && ship->weapon < world.weapons.size())
+          drawWeaponFan(drawList, projection, *ship, world.weapons[ship->weapon]);
       }
     }
   }
