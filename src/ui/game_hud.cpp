@@ -69,9 +69,9 @@ void GameHud::drawFlightPanel(GameSession &session, int width, int height)
   const auto &world = session.world();
   const auto *player = world.findPlayer(session.playerId());
   char runInfo[128]{};
-  std::snprintf(runInfo, sizeof(runInfo), "T+%07.1fs  |  T%06llu  |  C%zu  |  P%zu  |  TEAM %u  |  GROUP %zu",
-    world.elapsedSeconds, static_cast<unsigned long long>(world.tick), session.activeContactCount(), world.planets.size(),
-    player ? player->team + 1 : 0, session.selectedShipIds().size());
+  std::snprintf(runInfo, sizeof(runInfo), "T+%07.1fs  |  T%06llu  |  C%zu  |  P%zu  |  TEAM %u  |  GROUP %zu", world.elapsedSeconds,
+    static_cast<unsigned long long>(world.tick), session.activeContactCount(), world.planets.size(), player ? player->team + 1 : 0,
+    session.selectedShipIds().size());
   ImGui::GetForegroundDrawList()->AddText(ImVec2(16.0f, panelY - 21.0f), IM_COL32(215, 225, 238, 255), runInfo);
 
   ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8.0f, 6.0f));
@@ -123,8 +123,7 @@ void GameHud::drawFlightPanel(GameSession &session, int width, int height)
     if (targetShip && targetShip->exists)
     {
       ImGui::TextDisabled("TARGET #%u T%u", targetShip->id, targetShip->team + 1);
-      ImGui::Text("TGT HULL %.0f SHD %.0f", targetShip->combat.hull - targetShip->combat.hullDamage,
-        targetShip->combat.shields);
+      ImGui::Text("TGT HULL %.0f SHD %.0f", targetShip->combat.hull - targetShip->combat.hullDamage, targetShip->combat.shields);
     }
     else
     {
@@ -240,7 +239,7 @@ void GameHud::drawFlightPanel(GameSession &session, int width, int height)
   ImGui::SetNextItemWidth(targetingContentWidth * 0.62f);
   if (ImGui::BeginCombo("##target_by_id", selectedShipLabel.c_str()))
   {
-    for (const auto &shipSlot : session.world().ships)
+    for (const auto &shipSlot : session.world().shipStorage())
     {
       if (!shipSlot || !shipSlot->exists)
       {
@@ -273,17 +272,17 @@ void GameHud::drawFlightPanel(GameSession &session, int width, int height)
   }
 
   ImGui::SameLine();
-  const std::string lockLabel =
-    "LOCK " + std::to_string(lockedTargetCount) + "/" + std::to_string(selectedShipIds.size()) + " [R]";
+  const std::string lockLabel = "LOCK " + std::to_string(lockedTargetCount) + "/" + std::to_string(selectedShipIds.size()) + " [R]";
   if (ImGui::Button(lockLabel.c_str(), ImVec2(-1.0f, 23.0f)))
   {
     session.aimAtSelection();
   }
 
-  const bool mixedWeapons = ship && std::any_of(selectedShipIds.begin(), selectedShipIds.end(), [&world, ship](spasim::EntityId shipId) {
-    const auto *selectedShip = world.findShip(shipId);
-    return selectedShip && selectedShip->weapon != ship->weapon;
-  });
+  const bool mixedWeapons =
+    ship && std::any_of(selectedShipIds.begin(), selectedShipIds.end(), [&world, ship](spasim::EntityId shipId) {
+      const auto *selectedShip = world.findShip(shipId);
+      return selectedShip && selectedShip->weapon != ship->weapon;
+    });
   const std::string weaponName = currentWeaponName(session);
   ImGui::SetNextItemWidth(targetingContentWidth * 0.52f);
   if (ImGui::BeginCombo("##weapon_profile", weaponName.c_str()))
@@ -291,10 +290,10 @@ void GameHud::drawFlightPanel(GameSession &session, int width, int height)
     for (std::size_t index = 0; index < session.world().weapons.size(); ++index)
     {
       const bool selected = !selectedShipIds.empty() &&
-        std::all_of(selectedShipIds.begin(), selectedShipIds.end(), [&world, index](spasim::EntityId shipId) {
-          const auto *selectedShip = world.findShip(shipId);
-          return selectedShip && selectedShip->weapon == index;
-        });
+                            std::all_of(selectedShipIds.begin(), selectedShipIds.end(), [&world, index](spasim::EntityId shipId) {
+                              const auto *selectedShip = world.findShip(shipId);
+                              return selectedShip && selectedShip->weapon == index;
+                            });
 
       if (ImGui::Selectable(session.world().weapons[index].name.c_str(), selected))
       {

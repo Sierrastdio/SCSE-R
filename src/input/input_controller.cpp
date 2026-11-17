@@ -81,7 +81,7 @@ void InputController::finishShipSelection(SDL_Window *window, Camera &camera, Ga
   if (right - left >= 5 || bottom - top >= 5)
   {
     std::vector<spasim::EntityId> shipIds;
-    for (const auto &ship : session.world().ships)
+    for (const auto &ship : session.world().shipStorage())
     {
       if (!ship || !session.controlsShip(ship->id))
         continue;

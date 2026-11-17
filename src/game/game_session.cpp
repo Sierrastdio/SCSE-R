@@ -130,7 +130,7 @@ void GameSession::advance(double frameSeconds)
 
 void GameSession::updateTrails()
 {
-  for (const auto &ship : world().ships)
+  for (const auto &ship : world().shipStorage())
   {
     if (!ship || !ship->exists)
       continue;
@@ -191,11 +191,11 @@ void GameSession::adjustHeading(double yawDegrees, double pitchDegrees)
 std::size_t GameSession::activeContactCount() const noexcept
 {
   std::size_t count = 0;
-  for (const auto &ship : world().ships)
+  for (const auto &ship : world().shipStorage())
     count += ship && ship->exists;
-  for (const auto &base : world().bases)
+  for (const auto &base : world().baseStorage())
     count += base && base->exists;
-  for (const auto &torpedo : world().torpedoes)
+  for (const auto &torpedo : world().torpedoStorage())
     count += torpedo && torpedo->exists;
   return count;
 }

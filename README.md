@@ -110,10 +110,7 @@ cmake --build build-arch --parallel
   only when a projectile reaches its target. Torpedoes remain separate simulated
   entities.
 
-The world view retains the Python debug renderer's camera gestures, projection
-views, orbit levels, gravity boundaries, team colors, 3D cone ship markers,
-ship travel direction, target-aim arrow, and ship trails. The GUI is a separate
-front end and does not change SCSE's console or snapshot renderer.
+The world view provides camera gestures, projection views, orbit levels, gravity boundaries, team colors, 3D ship markers, target-aim arrows, and ship trails.
 
 The pinned SCSE scenario provides two stationary practice targets for each
 team. The targeting panel lists each active ship by engine ID, team, and name.

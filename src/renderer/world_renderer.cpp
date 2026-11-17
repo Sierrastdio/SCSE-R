@@ -303,20 +303,20 @@ ImVec2 WorldProjection::project(const spasim::Vec3 &point) const
 WorldProjection makeProjection(const spasim::World &world, const Camera &camera, float width, float height)
 {
   std::vector<spasim::Vec3> positions;
-  positions.reserve(world.planets.size() + world.ships.size() + world.bases.size() + world.torpedoes.size()
-    + world.weaponProjectiles.size());
+  positions.reserve(
+    world.planets.size() + world.shipStorage().size() + world.baseStorage().size() + world.torpedoStorage().size() + world.projectiles().size());
   for (const auto &planet : world.planets)
     positions.push_back(planet.position);
-  for (const auto &ship : world.ships)
+  for (const auto &ship : world.shipStorage())
     if (ship && ship->exists)
       positions.push_back(ship->position);
-  for (const auto &base : world.bases)
+  for (const auto &base : world.baseStorage())
     if (base && base->exists)
       positions.push_back(base->position);
-  for (const auto &torpedo : world.torpedoes)
+  for (const auto &torpedo : world.torpedoStorage())
     if (torpedo && torpedo->exists)
       positions.push_back(torpedo->position);
-  for (const auto &projectile : world.weaponProjectiles)
+  for (const auto &projectile : world.projectiles())
   {
     positions.push_back(projectile.position);
   }
@@ -363,13 +363,13 @@ std::optional<spasim::Target> pickObject(const spasim::World &world, const World
 
   for (const auto &planet : world.planets)
     consider(spasim::Target::Kind::Planet, planet.id, planet.position);
-  for (const auto &ship : world.ships)
+  for (const auto &ship : world.shipStorage())
     if (ship && ship->exists)
       consider(spasim::Target::Kind::Entity, ship->id, ship->position);
-  for (const auto &base : world.bases)
+  for (const auto &base : world.baseStorage())
     if (base && base->exists)
       consider(spasim::Target::Kind::Entity, base->id, base->position);
-  for (const auto &torpedo : world.torpedoes)
+  for (const auto &torpedo : world.torpedoStorage())
     if (torpedo && torpedo->exists)
       consider(spasim::Target::Kind::Entity, torpedo->id, torpedo->position);
   return picked;
@@ -451,7 +451,7 @@ void drawWorld(ImDrawList &drawList, const spasim::World &world, spasim::PlayerI
     }
   }
 
-  for (const auto &ship : world.ships)
+  for (const auto &ship : world.shipStorage())
   {
     if (!ship || !ship->exists)
       continue;
@@ -466,7 +466,7 @@ void drawWorld(ImDrawList &drawList, const spasim::World &world, spasim::PlayerI
       drawList.AddCircle(position, 16.0f, IM_COL32(255, 255, 255, 230), 0, 2.0f);
   }
 
-  for (const auto &base : world.bases)
+  for (const auto &base : world.baseStorage())
   {
     if (!base || !base->exists)
       continue;
@@ -480,7 +480,7 @@ void drawWorld(ImDrawList &drawList, const spasim::World &world, spasim::PlayerI
     drawList.AddText(ImVec2(position.x + 9.0f, position.y + 6.0f), color, ("base #" + std::to_string(base->id)).c_str());
   }
 
-  for (const auto &torpedo : world.torpedoes)
+  for (const auto &torpedo : world.torpedoStorage())
   {
     if (!torpedo || !torpedo->exists)
       continue;
@@ -494,7 +494,7 @@ void drawWorld(ImDrawList &drawList, const spasim::World &world, spasim::PlayerI
       drawList.AddCircle(position, 14.0f, IM_COL32(255, 255, 255, 230), 0, 2.0f);
   }
 
-  for (const auto &projectile : world.weaponProjectiles)
+  for (const auto &projectile : world.projectiles())
   {
     const ImVec2 head = projection.project(projectile.position);
     const ImVec2 tail = projection.project(projectile.position - projectile.velocity * 0.02);
